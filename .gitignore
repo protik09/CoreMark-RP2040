@@ -73,6 +73,7 @@ _deps
 elf2uf2/
 generated/
 pico-sdk/
+CMakeDoxygenDefaults.cmake
 
 # vscode
 .vscode
