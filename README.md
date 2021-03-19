@@ -1,6 +1,5 @@
 
-![raspberry_logo](https://user-images.githubusercontent.com/7564408/111713781-8da39000-8850-11eb-96fc-78b649144337.gif)
-![plus](http://cdn.onlinewebfonts.com/svg/img_27761.png)
+![raspberry_logo](https://user-images.githubusercontent.com/7564408/111713781-8da39000-8850-11eb-96fc-78b649144337.gif) <font size="25"> + </font>
 ![coremark_logo](https://www.eembc.org/coremark/images/logo.png)
 # CoreMark-RP2040
 
