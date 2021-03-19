@@ -20,7 +20,7 @@ make clean
 make -j4
 ```
 
-* Copy the **Coremark-RP2040.uf2** file to the Raspberry Pi Pico.
+* Copy the **Coremark-RP2040.uf2** file to the RP2040 board.
 * Open a Serial Monitor at 115200 baud (or just maximum USB speed)
 * **IMPORTANT**: Press any key to start single core benchmark.
 
