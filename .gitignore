@@ -11,6 +11,7 @@
 *.ilk
 *.map
 *.exp
+*.dis
 
 # Precompiled Headers
 *.gch
@@ -21,6 +22,7 @@
 *.a
 *.la
 *.lo
+*.bak
 
 # Shared objects (inc. Windows DLLs)
 *.dll
@@ -35,6 +37,9 @@
 *.i*86
 *.x86_64
 *.hex
+*.uf2
+*.bin
+*.in
 
 # Debug files
 *.dSYM/
@@ -50,3 +55,25 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# CMake files
+build/
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+*/Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps
+elf2uf2/
+generated/
+pico-sdk/
+
+# vscode
+.vscode
+
