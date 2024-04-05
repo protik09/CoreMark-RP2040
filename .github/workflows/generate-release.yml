@@ -1,0 +1,91 @@
+name: Raspberry Pi Pico CoreMark Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Install RP2040 SDK
+      run: |
+        git clone https://github.com/raspberrypi/pico-sdk.git
+        cd pico-sdk
+        git submodule update --init
+        echo "PICO_SDK_PATH=$(pwd)" >> $GITHUB_ENV
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DPICO_PLATFORM=rp2040 -DPICO_SDK_PATH=$PICO_SDK_PATH
+
+    - name: Build firmware
+      run: |
+        cd build
+        make -j$(nproc)
+
+    - name: Generate release files
+      run: |
+        cd build
+        arm-none-eabi-objcopy -O ihex Coremark-RP2040.elf Coremark-RP2040.hex
+        arm-none-eabi-objcopy -O binary Coremark-RP2040.elf Coremark-RP2040.bin
+        python $PICO_SDK_PATH/tools/uf2conv.py -c Coremark-RP2040.uf2 -o Coremark-RP2040.uf2 Coremark-RP2040.bin
+
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/Coremark-RP2040.elf
+        asset_name: Coremark-RP2040.elf
+        asset_content_type: application/octet-stream
+
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/Coremark-RP2040.hex
+        asset_name: Coremark-RP2040.hex
+        asset_content_type: application/octet-stream
+
+    - name: Upload release assets
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/Coremark-RP2040.uf2
+        asset_name: Coremark-RP2040.uf2
+        asset_content_type: application/octet-stream
+        
