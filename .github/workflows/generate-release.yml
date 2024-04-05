@@ -39,7 +39,7 @@ jobs:
     - name: Build firmware
       run: |
         cd build
-        make -j$(nproc)
+        make
 
     - name: Generate release files
       run: |
@@ -88,4 +88,3 @@ jobs:
         asset_path: build/Coremark-RP2040.uf2
         asset_name: Coremark-RP2040.uf2
         asset_content_type: application/octet-stream
-        
