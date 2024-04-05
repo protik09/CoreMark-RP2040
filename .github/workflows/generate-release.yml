@@ -2,6 +2,7 @@ name: Raspberry Pi Pico CoreMark Build
 
 on:
   push:
+    branches: [ master ]
     tags:
       - 'v*'
 
