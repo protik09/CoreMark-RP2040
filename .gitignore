@@ -78,3 +78,6 @@ CMakeDoxygenDefaults.cmake
 # vscode
 .vscode
 
+# Ninja Build
+.ninja*
+build.ninja
