@@ -46,5 +46,3 @@ jobs:
         arm-none-eabi-objcopy -O ihex Coremark-RP2040.elf Coremark-RP2040.hex
         arm-none-eabi-objcopy -O binary Coremark-RP2040.elf Coremark-RP2040.bin
         python $PICO_SDK_PATH/tools/uf2conv.py -c Coremark-RP2040.uf2 -o Coremark-RP2040.uf2 Coremark-RP2040.bin
-        echo "::set-output name=hex::Coremark-RP2040.hex"
-
