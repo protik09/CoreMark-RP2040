@@ -24,7 +24,7 @@ file (GLOB all_SRCS "${PROJECT_SOURCE_DIR}/src/*.c" "${PROJECT_SOURCE_DIR}/src/*
 add_executable(Coremark-RP2040 ${all_SRCS})
 
 pico_set_program_name(Coremark-RP2040 "Coremark-RP2040")
-pico_set_program_version(Coremark-RP2040 "1.0")
+# pico_set_program_version(Coremark-RP2040 "1.0")
 
 pico_enable_stdio_uart(Coremark-RP2040 0)
 pico_enable_stdio_usb(Coremark-RP2040 1)
