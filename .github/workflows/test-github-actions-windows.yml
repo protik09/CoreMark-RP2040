@@ -1,4 +1,4 @@
-name: Test Github Actions
+name: Test Github Actions Windows
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@main
 
     - name: Install dependencies
       run: |
@@ -20,7 +20,7 @@ jobs:
         pico-setup-windows-x64-standalone.exe -y
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@main
       with:
         python-version: '3.x'
 

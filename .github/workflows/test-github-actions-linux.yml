@@ -1,4 +1,4 @@
-name: Test Github Actions
+name: Test Github Actions Linux
 
 on:
   push:
@@ -10,7 +10,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@main
 
     - name: Install dependencies
       run: |
@@ -18,7 +18,7 @@ jobs:
         sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@main
       with:
         python-version: '3.x'
 
