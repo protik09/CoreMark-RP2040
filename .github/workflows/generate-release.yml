@@ -53,41 +53,12 @@ jobs:
 
     - name: Create release
       id: create_release
-      uses: actions/create-release@main
+      uses: softprops/action-gh-release@master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      if: startsWith(github.ref, 'refs/tags/v')
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-
-    - name: Upload release assets
-      uses: actions/upload-release-asset@main
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build/Coremark-RP2040.elf
-        asset_name: Coremark-RP2040.elf
-        asset_content_type: application/octet-stream
-
-    - name: Upload release assets
-      uses: actions/upload-release-asset@main
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build/Coremark-RP2040.hex
-        asset_name: Coremark-RP2040.hex
-        asset_content_type: application/octet-stream
-
-    - name: Upload release assets
-      uses: actions/upload-release-asset@main
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: build/Coremark-RP2040.uf2
-        asset_name: Coremark-RP2040.uf2
-        asset_content_type: application/octet-stream
+        files: |
+          build/Coremark-RP2040.elf
+          build/Coremark-RP2040.hex
+          build/Coremark-RP2040.uf2
