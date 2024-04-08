@@ -2,7 +2,7 @@
 setlocal
 
 :: Directories to be removed
-set "dirs_to_remove=CMakeFiles CMakeScripts build generated"
+set "dirs_to_remove=CMakeFiles CMakeScripts build generated artifacts_to_upload"
 
 :: Files to be removed
 set "files_to_remove=cmake_install.cmake CMakeCache.txt CMakeLists.txt.user CMakeDoxygenDefaults.cmake CMakeDoxyfile.in *.ninja* *.map *.bin *.dis *.elf *.hex *.uf2 *.vcxproj *.filters *.sln"

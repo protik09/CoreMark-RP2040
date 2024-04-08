@@ -74,6 +74,7 @@ generated/
 pico-sdk/
 pioasm/
 CMakeDoxygenDefaults.cmake
+artifacts_to_upload/
 
 # vscode
 .vscode

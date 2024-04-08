@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Directories to be removed
-dirs_to_remove=("CMakeFiles" "CMakeScripts" "build" "build" "generated")
+dirs_to_remove=("CMakeFiles" "CMakeScripts" "build" "build" "generated" "artifacts_to_upload")
 
 # Files to be removed
 files_to_remove=("cmake_install.cmake" "CMakeCache.txt" "CMakeLists.txt.user" "CMakeDoxygenDefaults.cmake" "CMakeDoxyfile.in" "*.map" "*.bin" "*.dis" "*.elf" "*.hex" "*.uf2")
