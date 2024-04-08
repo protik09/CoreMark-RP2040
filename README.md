@@ -47,12 +47,11 @@ make all || cmake . && ninja build
 
 The useful files will be in the **artifacts_to_upload** directory.
 
-
 ### For Linux
 
 ![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
 
-```shell
+```bash
 make all
 ```
 
@@ -63,6 +62,10 @@ Copy the **Coremark-RP2040.uf2** file to the RP2040 board.
 Open a Serial Monitor at 115200 baud (or just maximum USB speed)
 
 **IMPORTANT**: Press any key to start single core benchmark.
+
+## RELEASES
+
+[![Static Badge](https://img.shields.io/badge/-LATEST_RELEASES-E1CFB3?style=flat&logo=githubactions)](https://github.com/protik09/CoreMark-RP2040/releases/latest)
 
 ## TODO
 
