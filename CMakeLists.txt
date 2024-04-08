@@ -5,15 +5,14 @@ cmake_minimum_required(VERSION 3.6)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
+
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 set(PICO_SDK_PATH $ENV{PICO_SDK_PATH})
-# set(PICO_SDK_PATH "/mnt/c/Users/proti/Desktop/Personal_Code/Embedded_Projects/pico/pico-sdk")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 include_directories(${PROJECT_SOURCE_DIR}/src/)
-
 project(Coremark-RP2040 C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK

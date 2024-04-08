@@ -56,9 +56,9 @@ volatile ee_s32 seed5_volatile = 0;
 CORETIMETYPE barebones_clock()
 {
     #ifndef NDEBUG
-    return (CORETIMETYPE)get_absolute_time();
+    return (CORETIMETYPE)to_us_since_boot(get_absolute_time());
     #else
-    CORETIMETYPE t = get_absolute_time()._private_us_since_boot;
+    CORETIMETYPE t = to_us_since_boot(get_absolute_time());
     return t;
     #endif
 }
