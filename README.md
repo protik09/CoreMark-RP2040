@@ -12,10 +12,11 @@ chip from the folks over at Raspberry Pi.
 
 Ensure that the **Pico C/C++ SDK** environment variables are set properly and you have cmake installed.
 
-For Linux check here:  ![Static Badge](https://img.shields.io/badge/-Linux-c31c4a?style=flat&logo=raspberrypi&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-sdk&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-sdk)
+For Linux check here:  [![Static Badge](https://img.shields.io/badge/-Linux-c31c4a?style=flat&logo=raspberrypi)](https://github.com/raspberrypi/pico-sdk
+)
 
-
-For Windows, the setup files can be found here:  ![Static Badge](https://img.shields.io/badge/-Windows-blue?logo=windows11&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-setup-windows%2Freleases%2Flatest%2Fdownload%2Fpico-setup-windows-x64-standalone.exe)
+For Windows, the setup files can be found here:  [![Static Badge](https://img.shields.io/badge/-Windows-blue?logo=windows11)](https://github.com/raspberrypi/pico-setup-windows/releases/latest/download/pico-setup-windows-x64-standalone.exe
+)
 
 ### For Microsoft Windows
 
@@ -47,6 +48,7 @@ make all || cmake . && ninja build
 The useful files will be in the **artifacts_to_upload** directory.
 
 ![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
+
 ### For Linux
 
 ```shell
@@ -55,9 +57,11 @@ make all
 
 The useful files will be in the **artifacts_to_upload** directory.
 
-* Copy the **Coremark-RP2040.uf2** file to the RP2040 board.
-* Open a Serial Monitor at 115200 baud (or just maximum USB speed)
-* **IMPORTANT**: Press any key to start single core benchmark.
+Copy the **Coremark-RP2040.uf2** file to the RP2040 board.
+
+Open a Serial Monitor at 115200 baud (or just maximum USB speed)
+
+**IMPORTANT**: Press any key to start single core benchmark.
 
 ## TODO
 
