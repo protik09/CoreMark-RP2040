@@ -1,6 +1,6 @@
 # CoreMark RP2040❤️
 
-[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+![Build Status](https://github.com/protik09/CoreMark-RP2040/actions/workflows/generate-release.yml/badge.svg) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/protik09/CoreMark-RP2040) [![GitHub stars](https://img.shields.io/github/stars/protik09/CoreMark-RP2040.svg)](https://github.com/username/repository/stargazers)
 <!-- [![HitCount](http://hits.dwyl.com/protik09/CoreMark-RP2040.svg)](http://hits.dwyl.com/protik09/CoreMark-RP2040) -->
 
 ![Coremark_RP2040_logo](https://github.com/protik09/CoreMark-RP2040/blob/main/Coremark-RP2040.png?raw=true)
