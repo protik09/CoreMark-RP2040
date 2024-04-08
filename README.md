@@ -12,15 +12,9 @@ chip from the folks over at Raspberry Pi.
 
 Ensure that the **Pico C/C++ SDK** environment variables are set properly and you have cmake installed.
 
-For Linux check below:
+For Linux check here:  ![Static Badge](https://img.shields.io/badge/-Linux-c31c4a?style=flat&logo=raspberrypi&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-sdk)
 
-<object>![Static Badge](https://img.shields.io/badge/-Linux-c31c4a?style=flat&logo=raspberrypi&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-sdk)
-
-</object>
-
-For Windows, the setup files can be found below.
-
-<object>![Static Badge](https://img.shields.io/badge/-Windows-blue?logo=windows11&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-setup-windows%2Freleases%2Flatest%2Fdownload%2Fpico-setup-windows-x64-standalone.exe)</object>
+For Windows, the setup files can be found here:  ![Static Badge](https://img.shields.io/badge/-Windows-blue?logo=windows11&link=https%3A%2F%2Fgithub.com%2Fraspberrypi%2Fpico-setup-windows%2Freleases%2Flatest%2Fdownload%2Fpico-setup-windows-x64-standalone.exe)
 
 ### For Microsoft Windows
 
