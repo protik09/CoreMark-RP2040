@@ -39,14 +39,17 @@ jobs:
     - name: Build firmware
       run: |
         cd build
-        make
+        echo "Build machine has $(nproc) cores."
+        make -j$(nproc)
 
-    - name: Generate release files
+    - name: Check if release files exists
       run: |
         cd build
-        arm-none-eabi-objcopy -O ihex Coremark-RP2040.elf Coremark-RP2040.hex
-        arm-none-eabi-objcopy -O binary Coremark-RP2040.elf Coremark-RP2040.bin
-        $PICO_SDK_PATH/build/elf2uf2/elf2uf2 Coremark-RP2040.elf Coremark-RP2040.uf2
+        FILE=Coremark-RP2040.uf2
+
+        if [ -f "$FILE" ]; then
+            echo "$FILE exists."
+        fi
 
     - name: Create release
       id: create_release
