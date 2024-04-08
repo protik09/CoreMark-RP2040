@@ -47,9 +47,10 @@ make all || cmake . && ninja build
 
 The useful files will be in the **artifacts_to_upload** directory.
 
-![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
 
 ### For Linux
+
+![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
 
 ```shell
 make all
