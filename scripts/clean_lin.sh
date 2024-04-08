@@ -18,4 +18,4 @@ function cleanup {
 }
 
 # Call the cleanup function
-make clean || cleanup
+cleanup
