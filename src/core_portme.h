@@ -75,7 +75,7 @@ Original Author: Shay Gal-on
 #ifdef __GNUC__
         #define COMPILER_VERSION "GCC"__VERSION__
 #else
-        #define COMPILER_VERSION "arm-none-eabi-gcc 9.2.1 20191025"
+        #define COMPILER_VERSION "arm-none-eabi-gcc 10.3.1 20210824"
 #endif
 #endif
 #ifndef COMPILER_FLAGS
