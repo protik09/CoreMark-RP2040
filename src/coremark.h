@@ -158,8 +158,9 @@ typedef struct RESULTS_S
 
 /* Multicore execution handling */
 #if (MULTITHREAD > 1)
-ee_u8 core_start_parallel(core_results *res);
-ee_u8 core_stop_parallel(core_results *res);
+extern void core_start_parallel(ee_u16 core_index, core_results *results);
+extern void core_end_parallel(ee_u16 core_index);
+
 #endif
 
 /* list benchmark functions */

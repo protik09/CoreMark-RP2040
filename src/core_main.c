@@ -234,7 +234,7 @@ for (i = 0; i < MULTITHREAD; i++)
     /* perform actual benchmark */
     start_time();
 #if (MULTITHREAD > 1)
-    if (default_num_contexts > MULTITHREAD)
+    if (default_num_contexts < MULTITHREAD)
     {
         default_num_contexts = MULTITHREAD;
     }
@@ -242,11 +242,11 @@ for (i = 0; i < MULTITHREAD; i++)
     {
         results[i].iterations = results[0].iterations;
         results[i].execs = results[0].execs;
-        core_start_parallel(&results[i]);
+        core_start_parallel(i, &results[i]);;
     }
     for (i = 0; i < default_num_contexts; i++)
     {
-        core_stop_parallel(&results[i]);
+        core_end_parallel(i);
     }
 #else
     iterate(&results[0]);

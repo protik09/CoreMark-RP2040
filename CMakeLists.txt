@@ -35,6 +35,7 @@ pico_enable_stdio_usb(${PROJECT_NAME} 1)
 # Add any user requested libraries
 target_link_libraries(${PROJECT_NAME}
         pico_stdlib
+        pico_multicore
         hardware_timer
         hardware_clocks
         )

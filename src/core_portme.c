@@ -70,7 +70,7 @@ CORETIMETYPE barebones_clock()
    does not occur. If there are issues with the return value overflowing,
    increase this value.
         */
-// #define CLOCKS_PER_SEC 1000000.0
+#define CLOCKS_PER_SEC 1000000.0
 #define GETMYTIME(_t) (*_t = barebones_clock())
 #define MYTIMEDIFF(fin, ini) ((fin) - (ini))
 #define TIMER_RES_DIVIDER 1
@@ -188,4 +188,85 @@ void portable_fini(core_portable *p)
         sleep_ms(1000); // 1s delay
     }
     #endif
+}
+/* Function : core1_func 
+    This function is the entry point for core 1
+*/
+
+volatile core_results *global_results;
+volatile bool core1_finished = false;
+extern void *iterate(void *pres);
+
+/* Function : test_global_results
+        Test that every value in struct global_results matches that in struct results[1]
+*/
+void test_global_results(core_results *results)
+{
+    ee_printf("Test volatile structs\n");
+    if (global_results->seed1 != results[1].seed1)
+        ee_printf("Mismatch in seed1\n");
+    if (global_results->seed2 != results[1].seed2)
+        ee_printf("Mismatch in seed2\n");
+    if (global_results->seed3 != results[1].seed3)
+        ee_printf("Mismatch in seed3\n");
+    if (global_results->size != results[1].size)
+        ee_printf("Mismatch in size\n");
+    if (global_results->iterations != results[1].iterations)
+        ee_printf("Mismatch in iterations\n");
+    if (global_results->execs != results[1].execs)
+        ee_printf("Mismatch in execs\n");
+    if (global_results->crc != results[1].crc)
+        ee_printf("Mismatch in crc\n");
+    if (global_results->crclist != results[1].crclist)
+        ee_printf("Mismatch in crclist\n");
+    if (global_results->crcmatrix != results[1].crcmatrix)
+        ee_printf("Mismatch in crcmatrix\n");
+    if (global_results->crcstate != results[1].crcstate)
+        ee_printf("Mismatch in crcstate\n");
+    if (global_results->err != results[1].err)
+        ee_printf("Mismatch in err\n");
+    // Add more checks as needed for other fields in the struct
+}
+
+
+void core1_func(void)
+{
+    iterate(&global_results); // TODO: Fix the errors its running this
+    core1_finished = true;
+}
+
+/* Function : core_start_parallel
+        Start the parallel core
+*/
+void core_start_parallel(ee_u16 core_index, core_results *results)
+{
+    if (core_index == 1)
+    {
+        ee_printf("Starting core 1 iterations\n");
+        global_results = (volatile core_results*) &results[core_index];
+        test_global_results(results);
+        multicore_launch_core1(core1_func);
+        test_global_results(results);
+
+    }
+    else
+    {
+        ee_printf("Starting core 0 iterations\n");
+        iterate(&results[0]);
+    }
+}
+
+/* Function : core_end_parallel
+        End the parallel core
+*/
+void core_end_parallel(ee_u16 core_index)
+{
+    
+    ee_printf("Core %d finished - %d \n", core_index, core1_finished);
+    // while(!core1_finished)
+    // {
+    //     tight_loop_contents(); // RP2040 specific NO-OP
+    // }
+    // // Reset core 1 after parallel execution
+    // multicore_reset_core1(); // TODO: remove for timing reasons later on
 }

@@ -95,6 +95,7 @@ Original Author: Shay Gal-on
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "pico/types.h"
+#include "pico/multicore.h"
 
 /* Data Types :
         To avoid compiler issues, define the data types that need ot be used for
@@ -213,6 +214,14 @@ typedef struct CORE_PORTABLE_S
 /* target specific init/fini */
 void portable_init(core_portable *p, int *argc, char *argv[]);
 void portable_fini(core_portable *p);
+
+/* Custom core start code */
+#define PARALLEL_METHOD " Multicore"
+// extern struct RESULTS_S core_results;
+// extern void *iterate(void *pres);
+// extern void core_start_parallel(ee_u16 core_index, core_results *results);
+// extern void core_end_parallel(ee_u16 core_index);
+
 
 #if !defined(PROFILE_RUN) && !defined(PERFORMANCE_RUN) \
     && !defined(VALIDATION_RUN)
