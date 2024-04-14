@@ -5,11 +5,19 @@ cmake_minimum_required(VERSION 3.12)
 # Set C/C++ Standards
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-
+# set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
 
 # initalize pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
 set(PICO_SDK_PATH $ENV{PICO_SDK_PATH})
+
+if(NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Set the build type.")
+endif()
+
+if(NOT DEFINED PICO_PLATFORM)
+    set(PICO_PLATFORM rp2040 CACHE STRING "Set the platform.")
+endif()
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)

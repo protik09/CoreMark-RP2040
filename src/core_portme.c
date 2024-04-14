@@ -243,16 +243,15 @@ void core_start_parallel(ee_u16 core_index, core_results *results)
     if (core_index == 1)
     {
         ee_printf("Starting core 1 iterations\n");
-        global_results = (volatile core_results*) &results[core_index];
-        test_global_results(results);
+        global_results = (volatile core_results*) &results;
         multicore_launch_core1(core1_func);
-        test_global_results(results);
+        // test_global_results(results);
 
     }
     else
     {
         ee_printf("Starting core 0 iterations\n");
-        iterate(&results[0]);
+        iterate(&results);
     }
 }
 

@@ -169,7 +169,7 @@ typedef CORETIMETYPE CORE_TICKS;
    and <core_end_parallel> in <core_portme.c>, to fit a particular architecture.
 */
 #ifndef MULTITHREAD
-#define MULTITHREAD 1
+#define MULTITHREAD 2
 #define USE_PTHREAD 0
 #define USE_FORK    0
 #define USE_SOCKET  0

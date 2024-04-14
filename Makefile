@@ -14,7 +14,7 @@ else
 endif
 
 all:
-	mkdir build && mkdir artifacts_to_upload && cd build && cmake .. -DCMAKE_BUILD_TYPE=Release -DPICO_PLATFORM=rp2040 && $(BUILD_SYS)
+	mkdir build && mkdir artifacts_to_upload && cd build && cmake .. -DCMAKE_BUILD_TYPE=Debug && $(BUILD_SYS)
 	$(MOVE_FILES)
 .PHONY: all
 

@@ -242,7 +242,7 @@ for (i = 0; i < MULTITHREAD; i++)
     {
         results[i].iterations = results[0].iterations;
         results[i].execs = results[0].execs;
-        core_start_parallel(i, &results[i]);;
+        core_start_parallel(i, &results[i]);
     }
     for (i = 0; i < default_num_contexts; i++)
     {
