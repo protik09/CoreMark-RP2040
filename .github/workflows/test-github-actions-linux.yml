@@ -1,6 +1,7 @@
-name: Test Github Actions Linux
+name: Test Github ACtions Linux
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
 
@@ -11,6 +12,15 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@main
+      with:
+        fetch-depth: 0
+
+    - name: Generate Changelog
+      uses: BobAnkh/auto-generate-changelog@v1.2.5
+      with:
+        ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        COMMIT_MESSAGE: 'docs(CHANGELOG): Update Release notes'
+        TYPE: 'feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements'
 
     - name: Install dependencies
       run: |
@@ -41,7 +51,6 @@ jobs:
         echo "Build machine has $(nproc) cores."
         make -j$(nproc)
 
-
     - name: Check if release files exists
       run: |
         cd build
@@ -50,3 +59,15 @@ jobs:
         if [ -f "$FILE" ]; then
             echo "$FILE exists."
         fi
+
+    # - name: Create release
+    #   id: create_release
+    #   uses: softprops/action-gh-release@master
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #   if: startsWith(github.ref, 'refs/tags/v')
+    #   with:
+    #     files: |
+    #       build/Coremark-RP2040.elf
+    #       build/Coremark-RP2040.hex
+    #       build/Coremark-RP2040.uf2
