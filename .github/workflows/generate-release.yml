@@ -20,7 +20,7 @@ jobs:
       uses: BobAnkh/auto-generate-changelog@v1.2.5
       with:
         ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        COMMIT_MESSAGE: 'docs(CHANGELOG): Update Release notes'
+        COMMIT_MESSAGE: 'CHANGELOG: Update Release notes'
         TYPE: 'feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements'
 
     - name: Install dependencies
