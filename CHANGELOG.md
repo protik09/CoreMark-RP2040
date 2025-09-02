@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## [v1.0.7](https://github.com/protik09/CoreMark-RP2040/releases/tag/v1.0.7) - 2024-04-26 00:08:23
+## [v1.0.7](https://github.com/protik09/CoreMark-RP2040/releases/tag/v1.0.7) - 2024-04-26 00:08:23+00:00
 
 *No description*
 
