@@ -17,7 +17,7 @@ jobs:
         fetch-depth: 0
 
     - name: Generate Changelog
-      uses: BobAnkh/auto-generate-changelog@v1.3.0
+      uses: BobAnkh/auto-generate-changelog@v1.3.1
       with:
         ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
         COMMIT_MESSAGE: 'CHANGELOG: Update Release notes'
