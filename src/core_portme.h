@@ -79,10 +79,13 @@ Original Author: Shay Gal-on
 #endif
 #endif
 #ifndef COMPILER_FLAGS
-        #define COMPILER_FLAGS "og"/* "Please put compiler flags here (e.g. -o3)" */
+#ifndef FLAGS_STR
+#error "FLAGS_STR must be defined by the build (see CMakeLists.txt) so the report shows the real compiler flags."
+#endif
+        #define COMPILER_FLAGS FLAGS_STR /* set by CMakeLists.txt from the active build type */
 #endif
 #ifndef MEM_LOCATION
-        #define MEM_LOCATION "STACK"
+        #define MEM_LOCATION "HEAP"
 #endif
 
 /************************/
@@ -146,9 +149,15 @@ typedef CORETIMETYPE CORE_TICKS;
         MEM_MALLOC - for platforms that implement malloc and have malloc.h.
         MEM_STATIC - to use a static memory array.
         MEM_STACK - to allocate the data block on the stack (NYI).
+
+        RP2040 note :
+        MEM_STACK cannot be used with MULTITHREAD > 1. It places
+   TOTAL_DATA_SIZE * MULTITHREAD bytes in main()'s stack frame. Core 0's stack
+   is only the 4 KB SCRATCH_Y bank, and directly below it is core 1's stack in
+   SCRATCH_X. The data blocks therefore come from the heap in main SRAM.
 */
 #ifndef MEM_METHOD
-#define MEM_METHOD MEM_STACK
+#define MEM_METHOD MEM_MALLOC
 #endif
 
 /* Configuration : MULTITHREAD
@@ -167,12 +176,20 @@ typedef CORETIMETYPE CORE_TICKS;
 
         It is valid to have a different implementation of <core_start_parallel>
    and <core_end_parallel> in <core_portme.c>, to fit a particular architecture.
+
+        RP2040 note :
+        Each of the two cores runs one context, so MULTITHREAD is 2. How many
+   contexts a run actually uses, and which core runs each one, is set per run
+   by <default_num_contexts> and the run plan in <core_portme.c>.
 */
 #ifndef MULTITHREAD
 #define MULTITHREAD 2
 #define USE_PTHREAD 0
 #define USE_FORK    0
 #define USE_SOCKET  0
+#endif
+#if (MULTITHREAD != 2)
+#error "RP2040 port: MULTITHREAD must be 2 (one CoreMark context per core)."
 #endif
 
 /* Configuration : MAIN_HAS_NOARGC
@@ -202,26 +219,24 @@ typedef CORETIMETYPE CORE_TICKS;
 #endif
 
 /* Variable : default_num_contexts
-        Not used for this simple port, must cintain the value 1.
+        Number of contexts (1 or 2) used by the current run. portable_init()
+   sets it from the run plan before each run, the same way the reference
+   POSIX port sets it from its "M<n>" command line argument.
 */
 extern ee_u32 default_num_contexts;
 
 typedef struct CORE_PORTABLE_S
 {
     ee_u8 portable_id;
+    ee_u8 core; /* RP2040 core (0 or 1) that runs this context */
 } core_portable;
 
 /* target specific init/fini */
 void portable_init(core_portable *p, int *argc, char *argv[]);
 void portable_fini(core_portable *p);
 
-/* Custom core start code */
+/* Reported in the "Parallel ..." line of the CoreMark report */
 #define PARALLEL_METHOD " Multicore"
-// extern struct RESULTS_S core_results;
-// extern void *iterate(void *pres);
-// extern void core_start_parallel(ee_u16 core_index, core_results *results);
-// extern void core_end_parallel(ee_u16 core_index);
-
 
 #if !defined(PROFILE_RUN) && !defined(PERFORMANCE_RUN) \
     && !defined(VALIDATION_RUN)

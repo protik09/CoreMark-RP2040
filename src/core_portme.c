@@ -24,6 +24,7 @@ Original Author: Shay Gal-on
  * @brief Coremark port for the RP2040
  */
 
+#include <stdlib.h>
 #include "coremark.h"
 #include "core_portme.h"
 #include <time.h>
@@ -131,24 +132,79 @@ secs_ret time_in_secs(CORE_TICKS ticks)
     return retval;
 }
 
+/* Run plan : RP2040 multicore runs
+        CoreMark's main() is run once for every entry below. Each run is a
+   complete, unmodified CoreMark run (calibration, timed run, validation and
+   report). Only the number of contexts and the core each context runs on
+   differ, which is the job the template gives to the porting layer.
+*/
+typedef enum
+{
+    RUN_CORE0 = 0,
+    RUN_CORE1,
+    RUN_BOTH_CORES,
+    NUM_RUNS
+} rp2040_run_id;
+
+typedef struct
+{
+    const char *name;
+    ee_u32      num_contexts;                /* becomes default_num_contexts */
+    ee_u8       core_of_context[MULTITHREAD]; /* core that runs context i */
+} rp2040_run;
+
+static const rp2040_run rp2040_runs[NUM_RUNS] = {
+    [RUN_CORE0]      = { "Core 0 only", 1, { 0, 0 } },
+    [RUN_CORE1]      = { "Core 1 only", 1, { 1, 0 } },
+    [RUN_BOTH_CORES] = { "Core 0 + Core 1", 2, { 0, 1 } },
+};
+
 ee_u32 default_num_contexts = 1;
+
+static ee_u32        current_run;
+static ee_u32        next_context;   /* contexts dispatched so far this run */
+static ee_u32        run_iterations; /* iterations summed over all contexts */
+static core_results *core0_pending;  /* core 0 context not yet executed */
+static CORE_TICKS    run_ticks[NUM_RUNS];
+static ee_u32        run_total_iterations[NUM_RUNS];
+
+/* Function : portable_malloc
+        Provide a memory block for a context (MEM_METHOD == MEM_MALLOC).
+        Called by core 0 only, before any context starts running.
+*/
+void *portable_malloc(ee_size_t size)
+{
+    return malloc(size);
+}
+
+/* Function : portable_free
+        Release a block from <portable_malloc>.
+*/
+void portable_free(void *p)
+{
+    free(p);
+}
 
 /* Function : portable_init
         Target specific initialization code
         Test for some common mistakes.
+
+        Called by CoreMark's main() at the start of every run. The one-time
+   board setup lives in __wrap_main().
 */
 void portable_init(core_portable *p, int *argc, char *argv[])
 {
-    // Specific Init Code for RP 2040 with a nice welcome message
-    stdio_init_all();
-    getchar(); // PAUSE FOR HUMAN INPUT
-    ee_printf("CoreMark Performance Benchmark\n\n");
-    ee_printf("CoreMark measures how quickly your processor can manage linked\n\n");
-    ee_printf("lists, compute matrix multiply, and execute state machine code.\n\n");
-    ee_printf("Iterations/Sec is the main benchmark result, higher numbers are better.\n\n");
-    ee_printf("Press any key to continue.... \n\n\n");
-    ee_printf("Running.... (usually requires 12 to 20 seconds)\n\n");
+    const rp2040_run *run = &rp2040_runs[current_run];
 
+    (void)argc;
+    (void)argv;
+
+    ee_printf("\n========================================\n");
+    ee_printf("Run %lu of %d: %s\n",
+              (unsigned long)(current_run + 1),
+              (int)NUM_RUNS,
+              run->name);
+    ee_printf("========================================\n");
 
     if (sizeof(ee_ptr_int) != sizeof(ee_u8 *))
     {
@@ -160,26 +216,185 @@ void portable_init(core_portable *p, int *argc, char *argv[])
     {
         ee_printf("ERROR! Please define ee_u32 to a 32b unsigned type!\n");
     }
-    p->portable_id = 1;
-}
 
+    default_num_contexts = run->num_contexts;
+    next_context         = 0;
+    run_iterations       = 0;
+    core0_pending        = NULL;
+    p->portable_id       = 1;
+}
 
 /* Function : portable_fini
         Target specific final code
+
+        Called by CoreMark's main() after it has printed its report. The last
+   start_time()/stop_time() pair is the timed benchmark, so get_time() is the
+   same "Total ticks" value that the report shows.
 */
 void portable_fini(core_portable *p)
 {
-    p->portable_id = 0;
-    // initialise GPIO (Green LED connected to pin 25)
+    run_ticks[current_run]            = get_time();
+    run_total_iterations[current_run] = run_iterations;
+    p->portable_id                    = 0;
+}
+
+/* Function : core1_worker
+        Entry point of core 1. It runs for the whole session. It takes a
+   context (a core_results pointer) from the inter-core FIFO, runs it, and
+   sends the same pointer back when it has finished.
+*/
+static void core1_worker(void)
+{
+    for (;;)
+    {
+        core_results *res = (core_results *)multicore_fifo_pop_blocking();
+        iterate(res);
+        multicore_fifo_push_blocking((ee_ptr_int)res);
+    }
+}
+
+/* Function : core_start_parallel
+        Start a context. CoreMark calls this for every context after
+   start_time().
+
+        A context for core 1 is sent to core 1 and starts at once. A context for
+   core 0 is only recorded here. Core 0 is the caller, so running it now
+   would stop core 0 from starting the other contexts until it finished. It
+   runs in <core_stop_parallel> instead.
+*/
+ee_u8 core_start_parallel(core_results *res)
+{
+    ee_u8 core = rp2040_runs[current_run].core_of_context[next_context++];
+
+    res->port.core = core;
+    run_iterations += res->iterations;
+
+    if (core == 1)
+    {
+        multicore_fifo_push_blocking((ee_ptr_int)res);
+    }
+    else
+    {
+        core0_pending = res;
+    }
+    return 0;
+}
+
+/* Function : core_stop_parallel
+        Wait for a context to finish. CoreMark calls this for every context
+   before stop_time().
+
+        Core 0 first runs its own context, if it has one, while core 1 works on
+   its context. Then, if this context belongs to core 1, core 0 waits for
+   core 1 to report it finished.
+*/
+ee_u8 core_stop_parallel(core_results *res)
+{
+    if (core0_pending != NULL)
+    {
+        iterate(core0_pending);
+        core0_pending = NULL;
+    }
+    if (res->port.core == 1)
+    {
+        if ((core_results *)multicore_fifo_pop_blocking() != res)
+        {
+            ee_printf("ERROR! Core 1 returned an unexpected context!\n");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Function : print_summary
+        One line per run with the result from that run's report, for easy
+   comparison. Whether a run validated is shown in its own report.
+*/
+static void print_summary(void)
+{
+    ee_u32 i;
+
+    ee_printf("\n========================================\n");
+    ee_printf("RP2040 CoreMark summary\n");
+    ee_printf("========================================\n");
+    for (i = 0; i < NUM_RUNS; i++)
+    {
+#if HAS_FLOAT
+        secs_ret secs = time_in_secs(run_ticks[i]);
+        ee_printf("%-16s: %f Iterations/Sec (%lu iterations, %f secs)\n",
+                  rp2040_runs[i].name,
+                  (secs > 0) ? run_total_iterations[i] / secs : 0,
+                  (unsigned long)run_total_iterations[i],
+                  secs);
+#else
+        ee_printf("%-16s: %lu iterations, %lu ticks\n",
+                  rp2040_runs[i].name,
+                  (unsigned long)run_total_iterations[i],
+                  (unsigned long)run_ticks[i]);
+#endif
+    }
+#if HAS_FLOAT
+    {
+        secs_ret single = time_in_secs(run_ticks[RUN_CORE0]);
+        secs_ret both   = time_in_secs(run_ticks[RUN_BOTH_CORES]);
+        if ((single > 0) && (both > 0)
+            && (run_total_iterations[RUN_CORE0] > 0))
+        {
+            ee_printf("Dual core speed-up vs Core 0 only: %fx\n",
+                      (run_total_iterations[RUN_BOTH_CORES] / both)
+                          / (run_total_iterations[RUN_CORE0] / single));
+        }
+    }
+#endif
+    ee_printf("See each run's report above for validation.\n");
+}
+
+/* Function : __wrap_main
+        RP2040 entry point. CMakeLists.txt links with --wrap=main, so the SDK
+   start-up code calls this function, and __real_main is CoreMark's own
+   main() in core_main.c, unmodified. Calling main() once per run plan entry
+   is the on-target equivalent of running coremark.exe several times with a
+   different "M<n>" argument on the reference POSIX port.
+*/
+#if !MAIN_HAS_NOARGC
+#error "__wrap_main expects CoreMark's main() to take no arguments."
+#endif
+MAIN_RETURN_TYPE __real_main(void);
+
+int __wrap_main(void)
+{
+    // Specific Init Code for RP 2040 with a nice welcome message
+    stdio_init_all();
+    getchar(); // PAUSE FOR HUMAN INPUT
+    ee_printf("CoreMark Performance Benchmark\n\n");
+    ee_printf("CoreMark measures how quickly your processor can manage linked\n");
+    ee_printf("lists, compute matrix multiply, and execute state machine code.\n\n");
+    ee_printf("Iterations/Sec is the main benchmark result, higher numbers are better.\n\n");
+    ee_printf("CoreMark runs %d times: Core 0 only, Core 1 only, then both cores\n",
+              (int)NUM_RUNS);
+    ee_printf("together. Each run usually takes 12 to 20 seconds.\n");
+
+    multicore_launch_core1(core1_worker);
+
+    for (current_run = 0; current_run < NUM_RUNS; current_run++)
+    {
+        __real_main();
+    }
+
+    print_summary();
+    ee_printf("\n\nProgram Ended\n");
 
     #ifndef PICO_DEFAULT_LED_PIN
     #warning This program requires a board with a regular LED. Replace this line with your own stuff.
-
+    while (true)
+    {
+        tight_loop_contents();
+    }
     #else
-    ee_printf("\n\nProgram Ended\n");
+    // initialise GPIO (Green LED connected to pin 25)
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
-    while(true)
+    while (true)
     {
         gpio_put(PICO_DEFAULT_LED_PIN, 1); // Set pin 25 to high
         sleep_ms(1000); // 1s delay
@@ -188,84 +403,4 @@ void portable_fini(core_portable *p)
         sleep_ms(1000); // 1s delay
     }
     #endif
-}
-/* Function : core1_func 
-    This function is the entry point for core 1
-*/
-
-volatile core_results *global_results;
-volatile bool core1_finished = false;
-extern void *iterate(void *pres);
-
-/* Function : test_global_results
-        Test that every value in struct global_results matches that in struct results[1]
-*/
-void test_global_results(core_results *results)
-{
-    ee_printf("Test volatile structs\n");
-    if (global_results->seed1 != results[1].seed1)
-        ee_printf("Mismatch in seed1\n");
-    if (global_results->seed2 != results[1].seed2)
-        ee_printf("Mismatch in seed2\n");
-    if (global_results->seed3 != results[1].seed3)
-        ee_printf("Mismatch in seed3\n");
-    if (global_results->size != results[1].size)
-        ee_printf("Mismatch in size\n");
-    if (global_results->iterations != results[1].iterations)
-        ee_printf("Mismatch in iterations\n");
-    if (global_results->execs != results[1].execs)
-        ee_printf("Mismatch in execs\n");
-    if (global_results->crc != results[1].crc)
-        ee_printf("Mismatch in crc\n");
-    if (global_results->crclist != results[1].crclist)
-        ee_printf("Mismatch in crclist\n");
-    if (global_results->crcmatrix != results[1].crcmatrix)
-        ee_printf("Mismatch in crcmatrix\n");
-    if (global_results->crcstate != results[1].crcstate)
-        ee_printf("Mismatch in crcstate\n");
-    if (global_results->err != results[1].err)
-        ee_printf("Mismatch in err\n");
-    // Add more checks as needed for other fields in the struct
-}
-
-
-void core1_func(void)
-{
-    iterate(&global_results); // TODO: Fix the errors its running this
-    core1_finished = true;
-}
-
-/* Function : core_start_parallel
-        Start the parallel core
-*/
-void core_start_parallel(ee_u16 core_index, core_results *results)
-{
-    if (core_index == 1)
-    {
-        ee_printf("Starting core 1 iterations\n");
-        global_results = (volatile core_results*) &results;
-        multicore_launch_core1(core1_func);
-        // test_global_results(results);
-
-    }
-    else
-    {
-        ee_printf("Starting core 0 iterations\n");
-        iterate(&results);
-    }
-}
-
-/* Function : core_end_parallel
-        End the parallel core
-*/
-void core_end_parallel(ee_u16 core_index)
-{
-    
-    ee_printf("Core %d finished - %d \n", core_index, core1_finished);
-    // while(!core1_finished)
-    // {
-    //     tight_loop_contents(); // RP2040 specific NO-OP
-    // }
-    // // Reset core 1 after parallel execution
-    // multicore_reset_core1(); // TODO: remove for timing reasons later on
 }
