@@ -28,6 +28,9 @@ Original Author: Shay Gal-on
 #include "coremark.h"
 #include "core_portme.h"
 #include <time.h>
+#if LIB_PICO_STDIO_USB
+#include "pico/stdio_usb.h"
+#endif
 
 #if VALIDATION_RUN
 volatile ee_s32 seed1_volatile = 0x3415;
@@ -365,14 +368,23 @@ int __wrap_main(void)
 {
     // Specific Init Code for RP 2040 with a nice welcome message
     stdio_init_all();
-    getchar(); // PAUSE FOR HUMAN INPUT
+#if LIB_PICO_STDIO_USB
+    // USB CDC output is discarded until a terminal opens the port, so wait
+    // for one before printing anything, or the banner and prompt are lost.
+    while (!stdio_usb_connected())
+    {
+        sleep_ms(100);
+    }
+#endif
     ee_printf("CoreMark Performance Benchmark\n\n");
     ee_printf("CoreMark measures how quickly your processor can manage linked\n");
     ee_printf("lists, compute matrix multiply, and execute state machine code.\n\n");
     ee_printf("Iterations/Sec is the main benchmark result, higher numbers are better.\n\n");
     ee_printf("CoreMark runs %d times: Core 0 only, Core 1 only, then both cores\n",
               (int)NUM_RUNS);
-    ee_printf("together. Each run usually takes 12 to 20 seconds.\n");
+    ee_printf("together. Each run usually takes 12 to 20 seconds.\n\n");
+    ee_printf("Press any key to start the benchmark...\n");
+    getchar(); // PAUSE FOR HUMAN INPUT
 
     multicore_launch_core1(core1_worker);
 
