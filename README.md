@@ -17,6 +17,8 @@ You don't need the SDK or a compiler to run the benchmark. All you need is to co
 3. Drag **Coremark-RP2040.uf2** onto the **RPI-RP2** drive. The Pico restarts by itself and runs the benchmark firmware.
 4. Open a serial monitor on the Pico's USB serial port and press any key to start.
 
+**IMPORTANT: Press any key to start the benchmark.**
+
 You only need the build steps below if you want to change the code or build the firmware yourself.
 
 ## How to Build
