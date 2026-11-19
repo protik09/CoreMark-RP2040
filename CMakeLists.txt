@@ -1,6 +1,6 @@
 # Generated Cmake Pico project file
 
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 # Set C/C++ Standards
 set(CMAKE_C_STANDARD 11)
@@ -33,6 +33,16 @@ pico_sdk_init()
 file (GLOB all_SRCS "${PROJECT_SOURCE_DIR}/src/*.c" "${PROJECT_SOURCE_DIR}/src/*.h")
 add_executable(${PROJECT_NAME} ${all_SRCS})
 
+# Report the real compiler flags in CoreMark's "Compiler flags" line
+# (COMPILER_FLAGS in src/core_portme.h). CoreMark's reference ports pass them
+# the same way, as FLAGS_STR. The define applies to the whole target, so every
+# source file is still compiled with the same flags.
+string(TOUPPER "${CMAKE_BUILD_TYPE}" COREMARK_BUILD_TYPE)
+set(COREMARK_FLAGS_STR "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${COREMARK_BUILD_TYPE}}")
+string(REGEX REPLACE " +" " " COREMARK_FLAGS_STR "${COREMARK_FLAGS_STR}")
+string(STRIP "${COREMARK_FLAGS_STR}" COREMARK_FLAGS_STR)
+target_compile_definitions(${PROJECT_NAME} PRIVATE "FLAGS_STR=\"${COREMARK_FLAGS_STR}\"")
+
 pico_set_program_name(${PROJECT_NAME} "Coremark-RP2040")
 # pico_set_program_version(Coremark-RP2040 "1.0")
 
@@ -47,6 +57,13 @@ target_link_libraries(${PROJECT_NAME}
         hardware_timer
         hardware_clocks
         )
+
+# CoreMark's main() (src/core_main.c, unmodified) is run once per core
+# configuration: core 0 only, core 1 only, then both cores. With --wrap=main
+# the SDK start-up code calls __wrap_main() in src/core_portme.c, which calls
+# the real main() once per run. This is a link option only, so every source
+# file is still compiled with the same flags.
+target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--wrap=main")
 
 # Generate extra build files
 pico_add_extra_outputs(${PROJECT_NAME})
