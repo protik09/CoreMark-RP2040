@@ -11,12 +11,12 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@main
+      uses: actions/checkout@v7
 
     # Python runs the SDK's RP2040 boot-stage-2 checksum script and the
     # action's Arm GCC prune script.
     - name: Set up Python
-      uses: actions/setup-python@main
+      uses: actions/setup-python@v7
       with:
         python-version: '3.x'
 

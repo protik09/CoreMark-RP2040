@@ -1,18 +1,12 @@
-# Set update schedule for GitHub Actions
-# name: Dependabot
-
 version: 2
 updates:
+  # Keeps the versioned actions used by the workflows and the local composite action up to date
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/setup-pico-tools"
     schedule:
-      # Check for updates to GitHub Actions every week
       interval: "weekly"
-
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "daily"
     commit-message:
       prefix: "chore"
       include: "scope"

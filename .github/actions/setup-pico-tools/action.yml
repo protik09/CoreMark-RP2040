@@ -36,7 +36,7 @@ runs:
     # change.
     - name: Restore the Pico tools cache
       id: tools-cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.pico-sdk
         key: pico-tools-${{ runner.os }}-layout1-sdk${{ inputs.sdk-version }}-tools${{ inputs.sdk-tools-release }}-picotool${{ inputs.picotool-version }}-riscv${{ inputs.riscv-gcc-version }}-arm${{ inputs.arm-gcc-version }}-ninja${{ inputs.ninja-version }}-ccache${{ inputs.ccache-version }}
@@ -126,7 +126,7 @@ runs:
     # Compiled objects from earlier runs. Every run saves a new copy, and
     # restore-keys picks the newest one.
     - name: Restore the ccache cache
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.ccache
         key: ccache-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
