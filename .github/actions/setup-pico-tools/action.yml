@@ -1,0 +1,182 @@
+name: Set up Pico tools
+description: >-
+  Installs the Pico SDK, Arm and RISC-V GCC, picotool, Ninja (Windows only) and
+  ccache into ~/.pico-sdk, caches them between runs, and turns on ccache for
+  CMake builds. On Windows the layout matches what the Raspberry Pi Pico VS Code
+  extension installs, so scripts\setup_env.bat finds the tools by itself.
+
+# Tool Cache Versions
+inputs:
+  sdk-version:
+    description: Pico SDK git tag
+    default: '2.3.1'
+  sdk-tools-release:
+    description: raspberrypi/pico-sdk-tools release that has the prebuilt picotool and RISC-V GCC
+    default: 'v2.3.1-0'
+  picotool-version:
+    description: picotool version in that release (at least the SDK's minimum)
+    default: '2.3.1'
+  riscv-gcc-version:
+    description: RISC-V GCC version in that release
+    default: '16'
+  arm-gcc-version:
+    description: Arm GNU Toolchain version from developer.arm.com
+    default: '14.2.rel1'
+  ninja-version:
+    description: Ninja version (Windows only)
+    default: 'v1.12.1'
+  ccache-version:
+    description: ccache version
+    default: '4.14.3'
+
+runs:
+  using: composite
+  steps:
+    # The key is made of the tool versions. Bump "layout1" if the install steps
+    # change.
+    - name: Restore the Pico tools cache
+      id: tools-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.pico-sdk
+        key: pico-tools-${{ runner.os }}-layout1-sdk${{ inputs.sdk-version }}-tools${{ inputs.sdk-tools-release }}-picotool${{ inputs.picotool-version }}-riscv${{ inputs.riscv-gcc-version }}-arm${{ inputs.arm-gcc-version }}-ninja${{ inputs.ninja-version }}-ccache${{ inputs.ccache-version }}
+
+    - name: Install the Pico tools (Linux)
+      if: runner.os == 'Linux' && steps.tools-cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        SDK_VERSION: ${{ inputs.sdk-version }}
+        TOOLS_URL: https://github.com/raspberrypi/pico-sdk-tools/releases/download/${{ inputs.sdk-tools-release }}
+        PICOTOOL_VERSION: ${{ inputs.picotool-version }}
+        RISCV_GCC_VERSION: ${{ inputs.riscv-gcc-version }}
+        ARM_GCC_VERSION: ${{ inputs.arm-gcc-version }}
+        CCACHE_VERSION: ${{ inputs.ccache-version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        root="$HOME/.pico-sdk"
+
+        # unpack <url> <directory> [tar options]: download an archive and unpack it
+        unpack() {
+          local archive="$RUNNER_TEMP/download"
+          curl -sSfL -o "$archive" "$1"
+          mkdir -p "$2"
+          tar -xf "$archive" -C "$2" "${@:3}"
+          rm "$archive"
+        }
+
+        sdk="$root/sdk/$SDK_VERSION"
+        git -c advice.detachedHead=false clone -q --depth 1 -b "$SDK_VERSION" https://github.com/raspberrypi/pico-sdk.git "$sdk"
+        git -C "$sdk" submodule update -q --init --depth 1 lib/tinyusb
+
+        arm="$root/toolchain/${ARM_GCC_VERSION//./_}"
+        unpack "https://developer.arm.com/-/media/Files/downloads/gnu/$ARM_GCC_VERSION/binrel/arm-gnu-toolchain-$ARM_GCC_VERSION-x86_64-arm-none-eabi.tar.xz" \
+               "$arm" --strip-components=1
+        python3 "$ACTION_PATH/prune_arm_multilibs.py" "$arm"
+
+        unpack "$TOOLS_URL/riscv-toolchain-$RISCV_GCC_VERSION-x86_64-lin.tar.gz" "$root/toolchain/RISCV_$RISCV_GCC_VERSION"
+        unpack "$TOOLS_URL/picotool-$PICOTOOL_VERSION-x86_64-lin.tar.gz" "$root/picotool/$PICOTOOL_VERSION"
+        unpack "https://github.com/ccache/ccache/releases/download/v$CCACHE_VERSION/ccache-$CCACHE_VERSION-linux-x86_64-musl-static.tar.gz" \
+               "$root/ccache/$CCACHE_VERSION" --strip-components=1
+
+    - name: Install the Pico tools (Windows)
+      if: runner.os == 'Windows' && steps.tools-cache.outputs.cache-hit != 'true'
+      shell: pwsh
+      env:
+        SDK_VERSION: ${{ inputs.sdk-version }}
+        TOOLS_URL: https://github.com/raspberrypi/pico-sdk-tools/releases/download/${{ inputs.sdk-tools-release }}
+        PICOTOOL_VERSION: ${{ inputs.picotool-version }}
+        RISCV_GCC_VERSION: ${{ inputs.riscv-gcc-version }}
+        ARM_GCC_VERSION: ${{ inputs.arm-gcc-version }}
+        NINJA_VERSION: ${{ inputs.ninja-version }}
+        CCACHE_VERSION: ${{ inputs.ccache-version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        $root = Join-Path $env:USERPROFILE '.pico-sdk'
+
+        function Expand-Download([string]$Url, [string]$Destination, [int]$Strip = 0) {
+          New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+          $archive = Join-Path $env:RUNNER_TEMP 'download.zip'
+          curl.exe -sSfL -o $archive $Url
+          if ($LASTEXITCODE -ne 0) { throw "Downloading $Url failed" }
+          # Windows' own tar (bsdtar) extracts .zip files; Git's GNU tar can't.
+          & "$env:SystemRoot\System32\tar.exe" -xf $archive -C $Destination --strip-components=$Strip
+          if ($LASTEXITCODE -ne 0) { throw "Extracting $Url failed" }
+          Remove-Item $archive
+        }
+
+        $sdk = Join-Path $root "sdk\$env:SDK_VERSION"
+        git -c advice.detachedHead=false clone -q --depth 1 -b $env:SDK_VERSION https://github.com/raspberrypi/pico-sdk.git $sdk
+        if ($LASTEXITCODE -ne 0) { throw 'Cloning the Pico SDK failed' }
+        git -C $sdk submodule update -q --init --depth 1 lib/tinyusb
+        if ($LASTEXITCODE -ne 0) { throw 'Cloning TinyUSB failed' }
+
+        $armVersion = $env:ARM_GCC_VERSION
+        $arm = Join-Path $root "toolchain\$($armVersion -replace '\.', '_')"
+        Expand-Download "https://developer.arm.com/-/media/Files/downloads/gnu/$armVersion/binrel/arm-gnu-toolchain-$armVersion-mingw-w64-x86_64-arm-none-eabi.zip" $arm
+        python "$env:ACTION_PATH\prune_arm_multilibs.py" $arm
+        if ($LASTEXITCODE -ne 0) { throw 'Pruning Arm GCC failed' }
+
+        Expand-Download "$env:TOOLS_URL/riscv-toolchain-$env:RISCV_GCC_VERSION-x64-win.zip" (Join-Path $root "toolchain\RISCV_$env:RISCV_GCC_VERSION")
+        Expand-Download "$env:TOOLS_URL/picotool-$env:PICOTOOL_VERSION-x64-win.zip" (Join-Path $root "picotool\$env:PICOTOOL_VERSION")
+        Expand-Download "https://github.com/ninja-build/ninja/releases/download/$env:NINJA_VERSION/ninja-win.zip" (Join-Path $root "ninja\$env:NINJA_VERSION")
+        Expand-Download "https://github.com/ccache/ccache/releases/download/v$env:CCACHE_VERSION/ccache-$env:CCACHE_VERSION-windows-x86_64.zip" `
+                        (Join-Path $root "ccache\$env:CCACHE_VERSION") -Strip 1
+
+    # Compiled objects from earlier runs. Every run saves a new copy, and
+    # restore-keys picks the newest one.
+    - name: Restore the ccache cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ccache-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: ccache-${{ runner.os }}-
+
+    - name: Use the Pico tools (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      env:
+        SDK_VERSION: ${{ inputs.sdk-version }}
+        PICOTOOL_VERSION: ${{ inputs.picotool-version }}
+        RISCV_GCC_VERSION: ${{ inputs.riscv-gcc-version }}
+        ARM_GCC_VERSION: ${{ inputs.arm-gcc-version }}
+        CCACHE_VERSION: ${{ inputs.ccache-version }}
+      run: |
+        root="$HOME/.pico-sdk"
+        {
+          echo "PICO_SDK_PATH=$root/sdk/$SDK_VERSION"
+          echo "picotool_DIR=$root/picotool/$PICOTOOL_VERSION/picotool"
+          echo "CCACHE_DIR=$HOME/.ccache"
+          echo "CCACHE_MAXSIZE=500M"
+          echo "CMAKE_C_COMPILER_LAUNCHER=ccache"
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          echo "CMAKE_ASM_COMPILER_LAUNCHER=ccache"
+        } >> "$GITHUB_ENV"
+        {
+          echo "$root/toolchain/${ARM_GCC_VERSION//./_}/bin"
+          echo "$root/toolchain/RISCV_$RISCV_GCC_VERSION/bin"
+          echo "$root/ccache/$CCACHE_VERSION"
+        } >> "$GITHUB_PATH"
+        # Zero the statistics so "ccache --show-stats" at the end shows this run only.
+        CCACHE_DIR="$HOME/.ccache" "$root/ccache/$CCACHE_VERSION/ccache" --zero-stats
+
+    # scripts\setup_env.bat finds the SDK, compilers, Ninja and picotool in
+    # %USERPROFILE%\.pico-sdk by itself. Only ccache needs setting up here.
+    - name: Use the Pico tools (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        CCACHE_VERSION: ${{ inputs.ccache-version }}
+      run: |
+        $ccache = Join-Path $env:USERPROFILE ".pico-sdk\ccache\$env:CCACHE_VERSION"
+        $env:CCACHE_DIR = Join-Path $env:USERPROFILE '.ccache'
+        Add-Content -Path $env:GITHUB_PATH -Value $ccache
+        Add-Content -Path $env:GITHUB_ENV -Value @(
+          "CCACHE_DIR=$env:CCACHE_DIR",
+          'CCACHE_MAXSIZE=500M',
+          'CMAKE_C_COMPILER_LAUNCHER=ccache',
+          'CMAKE_CXX_COMPILER_LAUNCHER=ccache',
+          'CMAKE_ASM_COMPILER_LAUNCHER=ccache'
+        )
+        # Zero the statistics so "ccache --show-stats" at the end shows this run only.
+        & (Join-Path $ccache 'ccache.exe') --zero-stats

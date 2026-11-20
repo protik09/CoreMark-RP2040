@@ -12,53 +12,49 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@main
-      with:
-        fetch-depth: 0
-
-    - name: Generate Changelog
-      uses: BobAnkh/auto-generate-changelog@v1.3.2
-      with:
-        ACCESS_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        COMMIT_MESSAGE: 'CHANGELOG: Update Release notes'
-        TYPE: 'feat:Feature,fix:Bug Fixes,docs:Documentation,refactor:Refactor,perf:Performance Improvements'
-
-    - name: Install dependencies
-      run: |
-        sudo apt update
-        sudo apt install -y cmake gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
 
     - name: Set up Python
       uses: actions/setup-python@main
       with:
         python-version: '3.x'
 
-    - name: Install RP2040 SDK
-      run: |
-        git clone https://github.com/raspberrypi/pico-sdk.git
-        cd pico-sdk
-        git submodule update --init
-        echo "PICO_SDK_PATH=$(pwd)" >> $GITHUB_ENV
+    # Pico SDK, Arm and RISC-V GCC, picotool and ccache. They come from the
+    # cache unless their versions (set in the action) have changed.
+    - name: Set up Pico tools
+      uses: ./.github/actions/setup-pico-tools
 
-    - name: Configure CMake
+    # One build directory per chip. ccache reuses objects compiled in earlier runs.
+    - name: Build RP2040 firmware
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DPICO_PLATFORM=rp2040 -DPICO_SDK_PATH=$PICO_SDK_PATH
-
-    - name: Build firmware
-      run: |
-        cd build
         echo "Build machine has $(nproc) cores."
-        make -j$(nproc)
+        cmake -S . -B build/rp2040 -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico -DPICO_SDK_PATH=$PICO_SDK_PATH
+        cmake --build build/rp2040 --parallel $(nproc)
 
-    - name: Check if release files exists
+    - name: Build RP2350 (Arm) firmware
       run: |
-        cd build
-        FILE=Coremark-RP2040.uf2
+        cmake -S . -B build/rp2350 -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2 -DPICO_SDK_PATH=$PICO_SDK_PATH
+        cmake --build build/rp2350 --parallel $(nproc)
 
-        if [ -f "$FILE" ]; then
-            echo "$FILE exists."
-        fi
+    - name: Build RP2350 (RISC-V) firmware
+      run: |
+        cmake -S . -B build/rp2350-riscv -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2 -DPICO_PLATFORM=rp2350-riscv -DPICO_SDK_PATH=$PICO_SDK_PATH
+        cmake --build build/rp2350-riscv --parallel $(nproc)
+
+    - name: Check that the release files exist
+      run: |
+        for f in build/rp2040/Coremark-RP2040.uf2 \
+                 build/rp2350/Coremark-RP2350.uf2 \
+                 build/rp2350-riscv/Coremark-RP2350-RISCV.uf2; do
+          if [ -f "$f" ]; then
+            echo "$f exists."
+          else
+            echo "$f is missing."
+            exit 1
+          fi
+        done
+
+    - name: Show ccache statistics
+      run: ccache --show-stats
 
     # - name: Create release
     #   id: create_release
@@ -68,6 +64,12 @@ jobs:
     #   if: startsWith(github.ref, 'refs/tags/v')
     #   with:
     #     files: |
-    #       build/Coremark-RP2040.elf
-    #       build/Coremark-RP2040.hex
-    #       build/Coremark-RP2040.uf2
+    #       build/rp2040/Coremark-RP2040.elf
+    #       build/rp2040/Coremark-RP2040.hex
+    #       build/rp2040/Coremark-RP2040.uf2
+    #       build/rp2350/Coremark-RP2350.elf
+    #       build/rp2350/Coremark-RP2350.hex
+    #       build/rp2350/Coremark-RP2350.uf2
+    #       build/rp2350-riscv/Coremark-RP2350-RISCV.elf
+    #       build/rp2350-riscv/Coremark-RP2350-RISCV.hex
+    #       build/rp2350-riscv/Coremark-RP2350-RISCV.uf2

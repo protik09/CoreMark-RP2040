@@ -1,8 +1,9 @@
 name: Test Github Actions Windows
 
 on:
+  workflow_dispatch:
   push:
-    branches: [ windows ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -12,39 +13,52 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@main
 
-    - name: Install dependencies
-      run: |
-        winget install wget cmake -y
-        winget install --id Arm.ArmGnuToolchain -y
-        wget https://github.com/raspberrypi/pico-setup-windows/releases/latest/download/pico-setup-windows-x64-standalone.exe
-        pico-setup-windows-x64-standalone.exe -y
-
+    # Python runs the SDK's RP2040 boot-stage-2 checksum script and the
+    # action's Arm GCC prune script.
     - name: Set up Python
       uses: actions/setup-python@main
       with:
         python-version: '3.x'
 
-    - name: Install RP2040 SDK
-      run: |
-        git clone https://github.com/raspberrypi/pico-sdk.git
-        cd pico-sdk
-        git submodule update --init
-        echo "PICO_SDK_PATH=$(pwd)" >> $GITHUB_ENV
+    # Pico SDK, Arm and RISC-V GCC, picotool, Ninja and ccache, in
+    # %USERPROFILE%\.pico-sdk where the Raspberry Pi Pico VS Code extension
+    # puts them. They come from the cache unless their versions (set in the
+    # action) have changed. The builds below go through scripts\setup_env.bat
+    # just like a Windows user's build. CMake comes from the runner image.
+    - name: Set up Pico tools
+      uses: ./.github/actions/setup-pico-tools
 
-    - name: Configure CMake
+    - name: Build RP2040 firmware
+      shell: cmd
       run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DPICO_PLATFORM=rp2040 -DPICO_SDK_PATH=$PICO_SDK_PATH
+        call scripts\setup_env.bat || exit /b 1
+        cmake -S . -B build\rp2040 -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico || exit /b 1
+        cmake --build build\rp2040 || exit /b 1
 
-    - name: Build firmware
+    - name: Build RP2350 (Arm) firmware
+      shell: cmd
       run: |
-        cd build
-        make
+        call scripts\setup_env.bat || exit /b 1
+        cmake -S . -B build\rp2350 -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2 || exit /b 1
+        cmake --build build\rp2350 || exit /b 1
 
-    - name: Generate release files
+    - name: Build RP2350 (RISC-V) firmware
+      shell: cmd
       run: |
-        cd build
-        arm-none-eabi-objcopy -O ihex Coremark-RP2040.elf Coremark-RP2040.hex
-        arm-none-eabi-objcopy -O binary Coremark-RP2040.elf Coremark-RP2040.bin
-        $PICO_SDK_PATH/build/elf2uf2/elf2uf2 Coremark-RP2040.elf Coremark-RP2040.uf2
+        call scripts\setup_env.bat || exit /b 1
+        cmake -S . -B build\rp2350-riscv -DCMAKE_BUILD_TYPE=Release -DPICO_BOARD=pico2 -DPICO_PLATFORM=rp2350-riscv || exit /b 1
+        cmake --build build\rp2350-riscv || exit /b 1
+
+    - name: Check that the UF2 files exist
+      shell: pwsh
+      run: |
+        $files = 'build\rp2040\Coremark-RP2040.uf2',
+                 'build\rp2350\Coremark-RP2350.uf2',
+                 'build\rp2350-riscv\Coremark-RP2350-RISCV.uf2'
+        $missing = $files | Where-Object { -not (Test-Path $_) }
+        if ($missing) { throw "Missing: $($missing -join ', ')" }
+        $files | ForEach-Object { "$_ exists." }
+
+    - name: Show ccache statistics
+      shell: pwsh
+      run: ccache --show-stats
