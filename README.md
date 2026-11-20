@@ -1,21 +1,27 @@
-# CoreMark RP2040❤️
+# CoreMark RP2040 & RP2350❤️
 
 ![Build Status](https://github.com/protik09/CoreMark-RP2040/actions/workflows/generate-release.yml/badge.svg) ![GitHub release (latest by date)](https://img.shields.io/github/v/release/protik09/CoreMark-RP2040) [![GitHub stars](https://img.shields.io/github/stars/protik09/CoreMark-RP2040.svg)](https://github.com/username/repository/stargazers)
 <!-- [![HitCount](http://hits.dwyl.com/protik09/CoreMark-RP2040.svg)](http://hits.dwyl.com/protik09/CoreMark-RP2040) -->
 
 ![Coremark_RP2040_logo](https://github.com/protik09/CoreMark-RP2040/blob/main/Coremark-RP2040.png?raw=true)
 
-This is the [COREMARK®](https://github.com/eembc/coremark) embedded benchmark ported for the [RP2040](https://github.com/raspberrypi/pico-sdk)
-chip from the folks over at Raspberry Pi.
+This is the [COREMARK®](https://github.com/eembc/coremark) embedded benchmark ported for the [RP2040 and RP2350](https://github.com/raspberrypi/pico-sdk)
+chips from the folks over at Raspberry Pi. On the RP2350 it can run on either of the chip's core types: Arm Cortex-M33 or RISC-V Hazard3.
 
 ## Quick Start (No Build Required)
 
-You don't need the SDK or a compiler to run the benchmark. All you need is to copy the UF2 file onto the Pico:
+You don't need the SDK or a compiler to run the benchmark. All you need is to copy the right UF2 file onto your board:
 
-1. Download **Coremark-RP2040.uf2** from the [latest release](https://github.com/protik09/CoreMark-RP2040/releases/latest) ([direct download](https://github.com/protik09/CoreMark-RP2040/releases/latest/download/Coremark-RP2040.uf2)).
-2. Hold down the **BOOTSEL** button on the Pico while you plug it into your computer over USB, then let go. The Pico shows up as a USB drive called **RPI-RP2**.
-3. Drag **Coremark-RP2040.uf2** onto the **RPI-RP2** drive. The Pico restarts by itself and runs the benchmark firmware.
-4. Open a serial monitor on the Pico's USB serial port and press any key to start.
+| Board | Chip and cores | UF2 file |
+| --- | --- | --- |
+| Pico, Pico W | RP2040 (Arm Cortex-M0+) | [Coremark-RP2040.uf2](https://github.com/protik09/CoreMark-RP2040/releases/latest/download/Coremark-RP2040.uf2) |
+| Pico 2, Pico 2 W | RP2350 (Arm Cortex-M33) | [Coremark-RP2350.uf2](https://github.com/protik09/CoreMark-RP2040/releases/latest/download/Coremark-RP2350.uf2) |
+| Pico 2, Pico 2 W | RP2350 (RISC-V Hazard3) | [Coremark-RP2350-RISCV.uf2](https://github.com/protik09/CoreMark-RP2040/releases/latest/download/Coremark-RP2350-RISCV.uf2) |
+
+1. Download the UF2 file for your board from the table above, or from the [latest release](https://github.com/protik09/CoreMark-RP2040/releases/latest).
+2. Hold down the **BOOTSEL** button on the board while you plug it into your computer over USB, then let go. It shows up as a USB drive called **RPI-RP2** (Pico) or **RP2350** (Pico 2).
+3. Drag the UF2 file onto that drive. The board restarts by itself and runs the benchmark firmware. On a Pico 2, the RP2350 starts the Arm or RISC-V cores to match the UF2 file.
+4. Open a serial monitor on the board's USB serial port and press any key to start.
 
 **IMPORTANT: Press any key to start the benchmark.**
 
@@ -23,54 +29,66 @@ You only need the build steps below if you want to change the code or build the 
 
 ## How to Build
 
-Ensure that the **Pico C/C++ SDK** environment variables are set properly and you have cmake installed.
+You need the **Pico C/C++ SDK 2.0 or later** (earlier versions can't build for the RP2350), the Arm GCC toolchain, CMake and Ninja (or Make on Linux). The RISC-V build also needs Raspberry Pi's RISC-V GCC toolchain.
 
-For Linux check here:  [![Static Badge](https://img.shields.io/badge/-Linux-c31c4a?style=flat&logo=raspberrypi)](https://github.com/raspberrypi/pico-sdk
-)
+Each chip has its own build directory and its own UF2 file:
 
-For Windows, the setup files can be found here:  [![Static Badge](https://img.shields.io/badge/-Windows-blue?logo=windows11)](https://github.com/raspberrypi/pico-setup-windows/releases/latest/download/pico-setup-windows-x64-standalone.exe
-)
+| UF2 file | Configure and build |
+| --- | --- |
+| Coremark-RP2040.uf2 | `cmake -S . -B build/rp2040 -DPICO_BOARD=pico` then `cmake --build build/rp2040` |
+| Coremark-RP2350.uf2 | `cmake -S . -B build/rp2350 -DPICO_BOARD=pico2` then `cmake --build build/rp2350` |
+| Coremark-RP2350-RISCV.uf2 | `cmake -S . -B build/rp2350-riscv -DPICO_BOARD=pico2 -DPICO_PLATFORM=rp2350-riscv` then `cmake --build build/rp2350-riscv` |
+
+The Makefile runs these commands for you:
+
+- `make all` builds **Coremark-RP2040.uf2** and **Coremark-RP2350.uf2** (needs only the Arm toolchain).
+- `make riscv` builds **Coremark-RP2350-RISCV.uf2** (needs the RISC-V toolchain).
+- `make clean` removes the build files.
+
+The UF2, ELF and HEX files are copied to the **artifacts_to_upload** directory. `make` builds the Debug configuration by default. Add `BUILD_TYPE=Release` (for example `make all BUILD_TYPE=Release`) to build with the same settings as the release UF2 files. The plain `cmake` commands above build Release by default.
 
 ### For Microsoft Windows
 
 ![Windows Terminal](https://img.shields.io/badge/Windows%20Terminal-%234D4D4D.svg?style=for-the-badge&logo=windows-terminal&logoColor=white)
 
-Add the **PICO_INSTALL_PATH** to User Environment Variables. 
+The old pico-setup-windows installer stops at SDK 1.5.1, which can't build for the RP2350. Use the official [Raspberry Pi Pico extension for VS Code](https://marketplace.visualstudio.com/items?itemName=raspberry-pi.raspberry-pi-pico) instead:
 
-For example, if you have installed the SDK in *"C:\Program Files\Raspberry Pi\Pico SDK v1.5.1"* then add **PICO_INSTALL_PATH** as *C:\Program Files\Raspberry Pi\Pico SDK v1.5.1* to User Environment Variables.
+1. Install the extension and create any new project with it once (for example the blink example), choosing Pico SDK 2.0 or later. This downloads the SDK, Arm GCC, CMake, Ninja and picotool into `%USERPROFILE%\.pico-sdk`. For the RISC-V build, also create a Pico 2 project for RISC-V once, so the extension downloads the RISC-V toolchain too.
+2. In CMD, in this project's directory, run:
 
-Then run the following commands in CMD in the project directory.
+    ```cmd
+    scripts\setup_env.bat
+    ```
 
-```cmd
-scripts/setup_env.bat
-```
+    It finds the newest SDK and tools in `%USERPROFILE%\.pico-sdk` and sets them up for that CMD window. If you still have the old installer and **PICO_INSTALL_PATH** set, it falls back to that, but then only the RP2040 build works.
 
-You can use the following command to clean the project directory.
+3. Build with the `cmake` commands from the table above, or with `make all` / `make riscv` if you have GNU Make.
 
-```cmd
-make clean || ./scripts/clean.bat
-
-```
-
-You can use the following command to build the project.
+To clean the project directory:
 
 ```cmd
-make all || cmake . && ninja build
+make clean || .\scripts\clean_win.bat
 ```
-
-The useful files will be in the **artifacts_to_upload** directory.
 
 ### For Linux
 
 ![Shell Script](https://img.shields.io/badge/shell_script-%23121011.svg?style=for-the-badge&logo=gnu-bash&logoColor=white)
 
+Set up the [Pico SDK](https://github.com/raspberrypi/pico-sdk) (2.0 or later) and set **PICO_SDK_PATH**. Then:
+
 ```bash
 make all
 ```
 
-The useful files will be in the **artifacts_to_upload** directory.
+For the RISC-V build, download `riscv-toolchain-*-x86_64-lin.tar.gz` from [pico-sdk-tools](https://github.com/raspberrypi/pico-sdk-tools/releases), extract it, add its `bin` directory to your `PATH`, and run:
 
-Copy the **Coremark-RP2040.uf2** file to the RP2040 board.
+```bash
+make riscv
+```
+
+### Running it
+
+Copy the UF2 file that matches your board (see the table in Quick Start) onto the board.
 
 Open a Serial Monitor at 115200 baud (or just maximum USB speed)
 
@@ -84,12 +102,13 @@ CoreMark runs three times in a row, and each run prints a complete, standard Cor
 2. **Core 1 only**: one context on core 1.
 3. **Core 0 + Core 1**: two contexts, one per core, running at the same time.
 
-A short summary at the end lists the Iterations/Sec of each run and the dual-core speed-up. Check each run's
+A short summary at the end shows the chip and its system clock, then lists the Iterations/Sec and CoreMark/MHz of each run and the dual-core speed-up. Check each run's
 report for `Correct operation validated`.
 
 ### Things you should know about the results of the benchmark
 
-- In the RP2040 results, core 1 alone will most likely have a slightly higher score than core 0 by itself, because core 0 also handles the USB serial port.
+- Each chip runs at its fastest officially supported clock: 200 MHz for the RP2040 (the core voltage is raised to 1.15 V for this) and 150 MHz for the RP2350. The chips run at different speeds, so use CoreMark/MHz rather than Iterations/Sec to compare them. To build with the SDK's default clocks instead (125 MHz for the RP2040), add `-DPICO_USE_FASTEST_SUPPORTED_CLOCK=0` to the `cmake` configure command.
+- Core 1 alone will most likely have a slightly higher score than core 0 by itself, because core 0 also handles the USB serial port.
 - The both-cores result will likely be below 2x, because both cores fetch code from the same flash cache - which can become a bit of a bottleneck.
 
 ## RELEASES
