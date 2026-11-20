@@ -20,7 +20,9 @@ inputs:
     description: RISC-V GCC version in that release
     default: '16'
   arm-gcc-version:
-    description: Arm GNU Toolchain version from developer.arm.com
+    description: >-
+      Arm GNU Toolchain version. Releases are listed at
+      https://gitlab.arm.com/tooling/gnu-toolchains-for-arm (one branch per release).
     default: '14.2.rel1'
   ninja-version:
     description: Ninja version (Windows only)
@@ -50,6 +52,7 @@ runs:
         PICOTOOL_VERSION: ${{ inputs.picotool-version }}
         RISCV_GCC_VERSION: ${{ inputs.riscv-gcc-version }}
         ARM_GCC_VERSION: ${{ inputs.arm-gcc-version }}
+        ARM_URL: https://gitlab.arm.com/api/v4/projects/tooling%2Fgnu-toolchains-for-arm/packages/generic/gnu-toolchain/${{ inputs.arm-gcc-version }}
         CCACHE_VERSION: ${{ inputs.ccache-version }}
         ACTION_PATH: ${{ github.action_path }}
       run: |
@@ -70,7 +73,7 @@ runs:
         git -C "$sdk" submodule update -q --init --depth 1 lib/tinyusb
 
         arm="$root/toolchain/${ARM_GCC_VERSION//./_}"
-        unpack "https://developer.arm.com/-/media/Files/downloads/gnu/$ARM_GCC_VERSION/binrel/arm-gnu-toolchain-$ARM_GCC_VERSION-x86_64-arm-none-eabi.tar.xz" \
+        unpack "$ARM_URL/arm-gnu-toolchain-$ARM_GCC_VERSION-x86_64-arm-none-eabi.tar.xz" \
                "$arm" --strip-components=1
         python3 "$ACTION_PATH/prune_arm_multilibs.py" "$arm"
 
@@ -88,6 +91,7 @@ runs:
         PICOTOOL_VERSION: ${{ inputs.picotool-version }}
         RISCV_GCC_VERSION: ${{ inputs.riscv-gcc-version }}
         ARM_GCC_VERSION: ${{ inputs.arm-gcc-version }}
+        ARM_URL: https://gitlab.arm.com/api/v4/projects/tooling%2Fgnu-toolchains-for-arm/packages/generic/gnu-toolchain/${{ inputs.arm-gcc-version }}
         NINJA_VERSION: ${{ inputs.ninja-version }}
         CCACHE_VERSION: ${{ inputs.ccache-version }}
         ACTION_PATH: ${{ github.action_path }}
@@ -113,7 +117,7 @@ runs:
 
         $armVersion = $env:ARM_GCC_VERSION
         $arm = Join-Path $root "toolchain\$($armVersion -replace '\.', '_')"
-        Expand-Download "https://developer.arm.com/-/media/Files/downloads/gnu/$armVersion/binrel/arm-gnu-toolchain-$armVersion-mingw-w64-x86_64-arm-none-eabi.zip" $arm
+        Expand-Download "$env:ARM_URL/arm-gnu-toolchain-$armVersion-mingw-w64-x86_64-arm-none-eabi.zip" $arm
         python "$env:ACTION_PATH\prune_arm_multilibs.py" $arm
         if ($LASTEXITCODE -ne 0) { throw 'Pruning Arm GCC failed' }
 
