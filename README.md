@@ -114,3 +114,43 @@ report for `Correct operation validated`.
 ## RELEASES
 
 [![Static Badge](https://img.shields.io/badge/-LATEST_RELEASES-E1CFB3?style=flat&logo=githubactions)](https://github.com/protik09/CoreMark-RP2040/releases/latest)
+
+## Reference Results
+
+Results below are from my real official Raspi boards. Check that your board performs about the same given the constraints.
+
+### Coremark-RP2350.uf2 (RP2350, Arm Cortex-M33 @ 150 MHz)
+
+Measured 2026-11-21 on an official Raspberry Pi Pico 2. Release build, GCC 14.2.1 20241119, `-O3`.
+
+| Run | Iterations/Sec | CoreMark/MHz | Iterations | Time (secs) |
+| --- | --- | --- | --- | --- |
+| Core 0 only | 425.729 | 2.838 | 6000 | 14.09 |
+| Core 1 only | 425.748 | 2.838 | 6000 | 14.09 |
+| Core 0 + Core 1 | 768.237 | 5.122 | 12000 | 15.62 |
+
+Dual core speed-up vs Core 0 only: **1.80x**
+
+### Coremark-RP2350-RISCV.uf2 (RP2350, RISC-V Hazard3 @ 150 MHz)
+
+Measured 2026-11-21 on the same Raspberry Pi Pico 2. Release build, GCC 16.1.0, `-O3`.
+
+| Run | Iterations/Sec | CoreMark/MHz | Iterations | Time (secs) |
+| --- | --- | --- | --- | --- |
+| Core 0 only | 494.565 | 3.297 | 6000 | 12.13 |
+| Core 1 only | 494.565 | 3.297 | 6000 | 12.13 |
+| Core 0 + Core 1 | 878.502 | 5.857 | 12000 | 13.66 |
+
+Dual core speed-up vs Core 0 only: **1.78x**
+
+### Coremark-RP2040.uf2 (RP2040, Arm Cortex-M0+ @ 200 MHz)
+
+Measured 2026-11-21 on an official Raspberry Pi Pico. Release build, GCC 14.2.1 20241119, `-O3`.
+
+| Run | Iterations/Sec | CoreMark/MHz | Iterations | Time (secs) |
+| --- | --- | --- | --- | --- |
+| Core 0 only | 395.131 | 1.976 | 6000 | 15.18 |
+| Core 1 only | 395.131 | 1.976 | 6000 | 15.18 |
+| Core 0 + Core 1 | 724.366 | 3.622 | 12000 | 16.57 |
+
+Dual core speed-up vs Core 0 only: **1.83x**
