@@ -21,7 +21,7 @@ Original Author: Shay Gal-on
  * @authors   Protik Banerji <protik09@gmail.com>
  * @copyright Protik Banerji, 2021
  *
- * @brief Coremark port for the RP2040
+ * @brief Coremark port for the RP2040 and RP2350
  */
 
 /* Topic : Description
@@ -88,6 +88,22 @@ Original Author: Shay Gal-on
         #define MEM_LOCATION "HEAP"
 #endif
 
+/* Definition : PORT_CHIP_NAME
+        Chip and CPU core type this binary was built for, shown in the
+   output. The SDK defines PICO_RP2350 on RP2350 builds, and the compiler
+   defines __riscv when building for the RP2350's Hazard3 cores. Anything
+   else is an RP2040 build.
+*/
+#if defined(PICO_RP2350) && PICO_RP2350
+#if defined(__riscv)
+#define PORT_CHIP_NAME "RP2350 (RISC-V Hazard3)"
+#else
+#define PORT_CHIP_NAME "RP2350 (Arm Cortex-M33)"
+#endif
+#else
+#define PORT_CHIP_NAME "RP2040 (Arm Cortex-M0+)"
+#endif
+
 /************************/
 /*  MODIFICATION START  */
 /************************/
@@ -99,6 +115,7 @@ Original Author: Shay Gal-on
 #include "pico/time.h"
 #include "pico/types.h"
 #include "pico/multicore.h"
+#include "hardware/clocks.h"
 
 /* Data Types :
         To avoid compiler issues, define the data types that need ot be used for
@@ -150,11 +167,12 @@ typedef CORETIMETYPE CORE_TICKS;
         MEM_STATIC - to use a static memory array.
         MEM_STACK - to allocate the data block on the stack (NYI).
 
-        RP2040 note :
+        RP2040 / RP2350 note :
         MEM_STACK cannot be used with MULTITHREAD > 1. It places
-   TOTAL_DATA_SIZE * MULTITHREAD bytes in main()'s stack frame. Core 0's stack
-   is only the 4 KB SCRATCH_Y bank, and directly below it is core 1's stack in
-   SCRATCH_X. The data blocks therefore come from the heap in main SRAM.
+   TOTAL_DATA_SIZE * MULTITHREAD bytes in main()'s stack frame. On both chips
+   core 0's stack is only the 4 KB SCRATCH_Y bank, and directly below it is
+   core 1's stack in SCRATCH_X. The data blocks therefore come from the heap
+   in main SRAM.
 */
 #ifndef MEM_METHOD
 #define MEM_METHOD MEM_MALLOC
@@ -177,7 +195,7 @@ typedef CORETIMETYPE CORE_TICKS;
         It is valid to have a different implementation of <core_start_parallel>
    and <core_end_parallel> in <core_portme.c>, to fit a particular architecture.
 
-        RP2040 note :
+        RP2040 / RP2350 note :
         Each of the two cores runs one context, so MULTITHREAD is 2. How many
    contexts a run actually uses, and which core runs each one, is set per run
    by <default_num_contexts> and the run plan in <core_portme.c>.
@@ -189,7 +207,7 @@ typedef CORETIMETYPE CORE_TICKS;
 #define USE_SOCKET  0
 #endif
 #if (MULTITHREAD != 2)
-#error "RP2040 port: MULTITHREAD must be 2 (one CoreMark context per core)."
+#error "RP2040/RP2350 port: MULTITHREAD must be 2 (one CoreMark context per core)."
 #endif
 
 /* Configuration : MAIN_HAS_NOARGC
@@ -228,7 +246,7 @@ extern ee_u32 default_num_contexts;
 typedef struct CORE_PORTABLE_S
 {
     ee_u8 portable_id;
-    ee_u8 core; /* RP2040 core (0 or 1) that runs this context */
+    ee_u8 core; /* core (0 or 1) that runs this context */
 } core_portable;
 
 /* target specific init/fini */

@@ -21,7 +21,7 @@ Original Author: Shay Gal-on
  * @authors   Protik Banerji <protik09@gmail.com>
  * @copyright Protik Banerji, 2021
  *
- * @brief Coremark port for the RP2040
+ * @brief Coremark port for the RP2040 and RP2350
  */
 
 #include <stdlib.h>
@@ -135,7 +135,7 @@ secs_ret time_in_secs(CORE_TICKS ticks)
     return retval;
 }
 
-/* Run plan : RP2040 multicore runs
+/* Run plan : multicore runs (RP2040 and RP2350)
         CoreMark's main() is run once for every entry below. Each run is a
    complete, unmodified CoreMark run (calibration, timed run, validation and
    report). Only the number of contexts and the core each context runs on
@@ -147,16 +147,16 @@ typedef enum
     RUN_CORE1,
     RUN_BOTH_CORES,
     NUM_RUNS
-} rp2040_run_id;
+} port_run_id;
 
 typedef struct
 {
     const char *name;
     ee_u32      num_contexts;                /* becomes default_num_contexts */
     ee_u8       core_of_context[MULTITHREAD]; /* core that runs context i */
-} rp2040_run;
+} port_run;
 
-static const rp2040_run rp2040_runs[NUM_RUNS] = {
+static const port_run port_runs[NUM_RUNS] = {
     [RUN_CORE0]      = { "Core 0 only", 1, { 0, 0 } },
     [RUN_CORE1]      = { "Core 1 only", 1, { 1, 0 } },
     [RUN_BOTH_CORES] = { "Core 0 + Core 1", 2, { 0, 1 } },
@@ -197,7 +197,7 @@ void portable_free(void *p)
 */
 void portable_init(core_portable *p, int *argc, char *argv[])
 {
-    const rp2040_run *run = &rp2040_runs[current_run];
+    const port_run *run = &port_runs[current_run];
 
     (void)argc;
     (void)argv;
@@ -267,7 +267,7 @@ static void core1_worker(void)
 */
 ee_u8 core_start_parallel(core_results *res)
 {
-    ee_u8 core = rp2040_runs[current_run].core_of_context[next_context++];
+    ee_u8 core = port_runs[current_run].core_of_context[next_context++];
 
     res->port.core = core;
     run_iterations += res->iterations;
@@ -309,6 +309,19 @@ ee_u8 core_stop_parallel(core_results *res)
     return 0;
 }
 
+/* Function : print_chip_info
+        Chip, core type and system clock. CMakeLists.txt runs each chip at its
+   fastest officially supported clock (200 MHz on the RP2040, 150 MHz on the
+   RP2350), so Iterations/Sec from different chips are only comparable per
+   MHz.
+*/
+static void print_chip_info(void)
+{
+    ee_printf("Chip: %s, system clock %lu MHz\n",
+              PORT_CHIP_NAME,
+              (unsigned long)(clock_get_hz(clk_sys) / 1000000u));
+}
+
 /* Function : print_summary
         One line per run with the result from that run's report, for easy
    comparison. Whether a run validated is shown in its own report.
@@ -316,22 +329,28 @@ ee_u8 core_stop_parallel(core_results *res)
 static void print_summary(void)
 {
     ee_u32 i;
+#if HAS_FLOAT
+    secs_ret mhz = (secs_ret)clock_get_hz(clk_sys) / 1000000.0;
+#endif
 
     ee_printf("\n========================================\n");
-    ee_printf("RP2040 CoreMark summary\n");
+    ee_printf("CoreMark summary\n");
+    print_chip_info();
     ee_printf("========================================\n");
     for (i = 0; i < NUM_RUNS; i++)
     {
 #if HAS_FLOAT
         secs_ret secs = time_in_secs(run_ticks[i]);
-        ee_printf("%-16s: %f Iterations/Sec (%lu iterations, %f secs)\n",
-                  rp2040_runs[i].name,
-                  (secs > 0) ? run_total_iterations[i] / secs : 0,
+        secs_ret ips  = (secs > 0) ? run_total_iterations[i] / secs : 0;
+        ee_printf("%-16s: %f Iterations/Sec, %f CoreMark/MHz (%lu iterations, %f secs)\n",
+                  port_runs[i].name,
+                  ips,
+                  ips / mhz,
                   (unsigned long)run_total_iterations[i],
                   secs);
 #else
         ee_printf("%-16s: %lu iterations, %lu ticks\n",
-                  rp2040_runs[i].name,
+                  port_runs[i].name,
                   (unsigned long)run_total_iterations[i],
                   (unsigned long)run_ticks[i]);
 #endif
@@ -353,7 +372,7 @@ static void print_summary(void)
 }
 
 /* Function : __wrap_main
-        RP2040 entry point. CMakeLists.txt links with --wrap=main, so the SDK
+        Entry point. CMakeLists.txt links with --wrap=main, so the SDK
    start-up code calls this function, and __real_main is CoreMark's own
    main() in core_main.c, unmodified. Calling main() once per run plan entry
    is the on-target equivalent of running coremark.exe several times with a
@@ -366,7 +385,7 @@ MAIN_RETURN_TYPE __real_main(void);
 
 int __wrap_main(void)
 {
-    // Specific Init Code for RP 2040 with a nice welcome message
+    // Board init (RP2040 or RP2350) with a nice welcome message
     stdio_init_all();
 #if LIB_PICO_STDIO_USB
     // USB CDC output is discarded until a terminal opens the port, so wait
@@ -376,7 +395,9 @@ int __wrap_main(void)
         sleep_ms(100);
     }
 #endif
-    ee_printf("CoreMark Performance Benchmark\n\n");
+    ee_printf("CoreMark Performance Benchmark\n");
+    print_chip_info();
+    ee_printf("\n");
     ee_printf("CoreMark measures how quickly your processor can manage linked\n");
     ee_printf("lists, compute matrix multiply, and execute state machine code.\n\n");
     ee_printf("Iterations/Sec is the main benchmark result, higher numbers are better.\n\n");
